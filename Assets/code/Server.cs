@@ -40,7 +40,6 @@ public class Server : MonoBehaviour {
 
     // Update is called once per frame
     void Update() {
-        //sendPosition();
         if (players.Count == 0)
         {
             serverText.text = "SERVER STARTED";

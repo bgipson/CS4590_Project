@@ -9,6 +9,7 @@ public class Player : MonoBehaviour {
 
     Client _client;
     public Vector3 position;
+    public Vector3 nearestPlayerOfInterest;
     public float heading;
     float defaultHeading;
     public Vector3 headingVector;
@@ -21,9 +22,12 @@ public class Player : MonoBehaviour {
     static Vector3 worldCoordinateBaseOffset = new Vector3(-1000, 5, 0);
 
     public AudioSource growl;
-	// Use this for initialization
-	void Start () {
-        //AudioMixer mixer = growl.outputAudioMixerGroup.audioMixer;
+    public AudioSource baseAmbientTrack;
+    public AudioSource moreIntenseAmbientTrack;
+    // Use this for initialization
+    void Start () {
+
+        nearestPlayerOfInterest = new Vector3(-1000, 0, 60);
 
         // read in camera
         // also read in client
@@ -58,6 +62,13 @@ public class Player : MonoBehaviour {
                     UpdatePosition();
                 }
                 // update heading
+
+
+                float distance = Vector3.Distance(position, nearestPlayerOfInterest);
+                float volume = Mathf.Clamp((distance - 30.0f) / 100.0f, 0, 1);
+                print(volume);
+                baseAmbientTrack.volume = volume;
+                moreIntenseAmbientTrack.volume = Mathf.Clamp((2.0f*(100 - distance)) / 100, 0, 1);
             }
         }
 	}
@@ -101,11 +112,18 @@ public class Player : MonoBehaviour {
         headingVector.z = Mathf.Cos((heading * Mathf.PI) / 180f);
     }
 
-    public void zombieUpdate(Vector2 zombiePosition) {
-        float distance = Vector2.Distance(position, zombiePosition);
+    public void zombieUpdate(Vector3 zombiePosition) {
+        float distance = Vector3.Distance(position, zombiePosition);
         growl.volume = Mathf.Clamp((100 - distance) / 100, 0, 1);
         growl.Play();
-        print((100 - distance) / 100);
+        //print((100 - distance) / 100);
+    }
+
+    public void ManageBackgroundAudio()
+    {
+        // @TODO:
+        // use information about distance from player and zombiePosition here to adjust tracks
+
     }
 
     bool MovementHasOccurred()

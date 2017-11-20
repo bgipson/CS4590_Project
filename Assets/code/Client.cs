@@ -16,6 +16,9 @@ public class Client : MonoBehaviour {
     public int xPosZombie = -1000;
     public int zPosZombie = 60;
 
+    float timeBetweenGrowls = 7.0f;
+    float lastGrowl = 0.0f;
+
     // need handles on these for events
     GameObject enemyText;
     GameObject connectToServer;
@@ -91,6 +94,15 @@ public class Client : MonoBehaviour {
             // send updated position to server
             CopyPlayerDataToInfo();
             client.Send(playerInfo.getID(), playerInfo);
+
+            // handle audio
+            if (lastGrowl + timeBetweenGrowls < Time.time)
+            {
+                //print("growling" + lastGrowl + "          " + Time.time);
+                lastGrowl = Time.time;
+                player.zombieUpdate(player.nearestPlayerOfInterest);
+            }
+            player.ManageBackgroundAudio();
         } else
         {
             if (!playerInfo.getMessage().Equals("not initialized"))
@@ -133,7 +145,6 @@ public class Client : MonoBehaviour {
     }
 
     void connect() {
-        // @TODO: Only connect once determined zombie/human
         if (playerInfo.isInitialized())
         {
             return;
@@ -207,7 +218,7 @@ public class Client : MonoBehaviour {
         string[] pos = details.messageContents.Split(' ');
         zPosZombie = int.Parse(pos[0]);
         xPosZombie = int.Parse(pos[1]);
-        Vector2 position = new Vector2(zPosZombie, xPosZombie);
+        Vector3 position = new Vector3(zPosZombie, 0, xPosZombie);
         player.zombieUpdate(position);
         clientText.text = "NEW MESSAGE: " +  details.messageContents;
     }
@@ -237,6 +248,11 @@ public class Client : MonoBehaviour {
         pauseText.SetActive(true);
         Cursor.visible = false;
         Cursor.lockState = CursorLockMode.Locked;
+        if (!player.baseAmbientTrack.isPlaying)
+        {
+            player.baseAmbientTrack.Play();
+            player.moreIntenseAmbientTrack.Play();
+        }
     }
 
     public void EnableClientDisplays()
@@ -249,6 +265,11 @@ public class Client : MonoBehaviour {
         pauseText.SetActive(false);
         Cursor.visible = true;
         Cursor.lockState = CursorLockMode.None;
+        if (player.baseAmbientTrack.isPlaying)
+        {
+            player.baseAmbientTrack.Stop();
+            player.moreIntenseAmbientTrack.Stop();
+        }
     }
 
     public void CopyPlayerDataToInfo()
