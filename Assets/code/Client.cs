@@ -19,7 +19,6 @@ public class Client : MonoBehaviour {
     // need handles on these for events
     GameObject enemyText;
     GameObject connectToServer;
-    GameObject exit;
     GameObject toggleMouse;
     public bool pauseMouse = false;
 
@@ -39,13 +38,13 @@ public class Client : MonoBehaviour {
         clientText.text = "STATUS: NOT CONNECTED";
         player = FindObjectOfType<Player>(); // local to this particular Client
         playerInfo = new PlayerInfo();
+        playerInfo.Init();
         client.RegisterHandler(MsgType.Connect, OnConnected);
         client.RegisterHandler(MsgType.Disconnect, OnDisconnected);
         client.RegisterHandler(MSG_POSITION, onReceivePosition);
         client.RegisterHandler(MSG_NEW_HUMAN, onReceiveID);
         enemyText = GameObject.Find("enemyText");
         connectToServer = GameObject.Find("ConnectToServer");
-        exit = GameObject.Find("Exit");
         toggleMouse = GameObject.Find("pauseText");
         pauseMouse = false;
 
@@ -65,7 +64,7 @@ public class Client : MonoBehaviour {
     {
         // Disconnected by server
         clientText.text = "STATUS: NOT CONNECTED";
-        playerInfo.initialized = false;
+        playerInfo.setInitialized(false);
         player.ResetSettings(); // handles playerInfo too
     }
 
@@ -77,12 +76,21 @@ public class Client : MonoBehaviour {
             return;
         }
 
-        if (playerInfo.initialized)
+        if (playerInfo.isInitialized())
         {
+            if (playerInfo.getMessage().Equals("Disconnecting"))
+            {
+                return;
+            }
             // send updated position to server
+            CopyPlayerDataToInfo();
             client.Send(playerInfo.getID(), playerInfo);
         } else
         {
+            if (!playerInfo.getMessage().Equals("not initialized"))
+            {
+                playerInfo.setMessage("not initialized");
+            }
             // Might take a few update cycles for server to acknowledge
             //print("here not connected");
         }
@@ -92,16 +100,16 @@ public class Client : MonoBehaviour {
 
     void HandleKeyboard()
     {
-        if (Input.GetKey(KeyCode.Escape))
+        if (Input.GetKeyDown(KeyCode.Escape))
         {
-            if (playerInfo.initialized)
+            if (playerInfo.isInitialized())
             {
                 returnToMenu();
             }
         }
         if (Input.GetKeyDown(KeyCode.P))
         {
-            if (playerInfo.initialized)
+            if (playerInfo.isInitialized())
             {
                 pauseMouse = !pauseMouse;
                 if (pauseMouse)
@@ -120,23 +128,24 @@ public class Client : MonoBehaviour {
 
     void connect() {
         // @TODO: Only connect once determined zombie/human
-        if (playerInfo.initialized)
+        if (playerInfo.isInitialized())
         {
             return;
         }
+        playerInfo.setMessage("Connecting"); // can get stuck based on threading from a last session.
         DisableClientDisplays();
         client.Connect("127.0.0.1", 1234);
     }
 
     void onReceiveID(NetworkMessage msg)
     {
-        if (!playerInfo.initialized)
+        if (!playerInfo.isInitialized())
         {
             NetworkMess details = msg.ReadMessage<NetworkMess>();
             playerInfo.setID(short.Parse(details.messageContents));
-            playerInfo.setMessage("New Player");
+            playerInfo.setMessage(""); // clear message
             client.Send(playerInfo.getID(), playerInfo);
-            playerInfo.initialized = true;
+            playerInfo.setInitialized(true);
         }
     }
 
@@ -157,11 +166,11 @@ public class Client : MonoBehaviour {
         playerInfo.setMessage("Disconnecting");
         if (playerInfo != null)
         {
-            if (playerInfo.initialized)
+            if (playerInfo.isInitialized())
             {
                 client.Send(playerInfo.getID(), playerInfo);
             }
-            playerInfo.initialized = false;
+            playerInfo.setInitialized(false);
         }
     }
 
@@ -187,15 +196,21 @@ public class Client : MonoBehaviour {
         Cursor.lockState = CursorLockMode.None;
     }
 
+    public void CopyPlayerDataToInfo()
+    {
+        playerInfo.position.x = player.position.x;
+        playerInfo.position.y = player.position.y;
+        playerInfo.position.z = player.position.z;
+    }
+
     public void returnToMenu() {
         pauseMouse = false;
         Cursor.visible = true;
         Cursor.lockState = CursorLockMode.None;
-        SceneManager.LoadScene("MainMenu");
         clientText.text = "STATUS: NOT CONNECTED";
         if (playerInfo != null)
         {
-            playerInfo.initialized = false;
+            playerInfo.setInitialized(false);
             playerInfo.setMessage("Disconnecting");
             player.ResetSettings(); // handles playerInfo too
             if (playerInfo.getID() != 0)
@@ -203,5 +218,6 @@ public class Client : MonoBehaviour {
                 client.Send(playerInfo.getID(), playerInfo);
             }
         }
+        SceneManager.LoadScene("MainMenu");
     }
 }

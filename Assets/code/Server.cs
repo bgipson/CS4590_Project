@@ -16,6 +16,7 @@ public class Server : MonoBehaviour {
     public InputField yField;
     public InputField xField;
     public int port = 1234;
+    public float maxTimeBeforeKick = 5.0f;
 
     List<PlayerInfo> players;
 
@@ -39,17 +40,20 @@ public class Server : MonoBehaviour {
 
     // Update is called once per frame
     void Update() {
-        if (Input.GetKeyDown(KeyCode.R)) {
-            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
-        }
-
-        if (Input.GetKeyDown(KeyCode.Space)) {
-            serverText.text = "STATUS: RESPONDING";
-            sendPosition();
-        }
+        //sendPosition();
         if (players.Count == 0)
         {
             serverText.text = "SERVER STARTED";
+        }
+        // check if players have timed out
+        for (int i=players.Count-1; i>=0; i--) // must go backward when deleting
+        {
+            if ((players[i].getTimeStamp() + maxTimeBeforeKick < Time.time) &&
+                players[i].getTimeStamp() > 0)
+            {
+                print("Player timed out: " + players[i].getID());
+                players.RemoveAt(i);
+            }
         }
 
         humansTotal.text = "Humans Total: " + players.Count.ToString();
@@ -60,13 +64,15 @@ public class Server : MonoBehaviour {
         short newPlayerID = GenerageUniquePlayerId();
         serverText.text = "STATUS: CONNECTION";
         NetworkServer.RegisterHandler(newPlayerID, OnPlayerUpdate);
-        players.Add(new PlayerInfo(newPlayerID));
+        PlayerInfo newPlayer = new PlayerInfo(newPlayerID);
+        newPlayer.Init();
+        players.Add(newPlayer);
 
         // send to player their ID
         NetworkMess msg = new NetworkMess();
         msg.messageContents = newPlayerID.ToString();
         NetworkServer.SendToAll(MSG_NEW_HUMAN, msg);
-        print(newPlayerID);
+        print("new player: " + newPlayerID);
     }
 
     void onDisnnection(NetworkMessage message)
@@ -77,24 +83,23 @@ public class Server : MonoBehaviour {
     void OnPlayerUpdate(NetworkMessage message)
     {
         PlayerInfo temp = message.ReadMessage<PlayerInfo>();
-        if (temp.getMessage().Equals("New Player"))
-        {
-            for (int i = 0; i < players.Count; i++)
+        int index = -1;
+        if (temp.getMessage() != null) {
+            if (temp.getMessage().Equals("Disconnecting"))
             {
-                if (players[i].getID() == temp.getID())
+                index = FindPlayerById(temp.getID());
+                if (index != -1)
                 {
-                    players[i].setX(temp.getX());
-                    players[i].setY(temp.getY());
-                    //print(temp.getX() + " " + temp.getY());
+                    print("player disconnecting: " + players[index].getID());
+                    players.RemoveAt(index);
                 }
             }
         }
-        else if (temp.getMessage().Equals("Disconnecting"))
+        index = FindPlayerById(temp.getID());
+        if (index != -1)
         {
-            int index = FindPlayerById(temp.getID());
-            if (index != -1) {
-                players.RemoveAt(index);
-            }
+            players[index].setTimeStamp(Time.time);
+            players[index].setPosition(temp.getPosition());
         }
     }
 

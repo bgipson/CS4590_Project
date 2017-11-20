@@ -44,7 +44,7 @@ public class Player : MonoBehaviour {
         if (_client.getPlayerInfo() != null)
         {
             _playerInfo = _client.getPlayerInfo();
-            if (_playerInfo.initialized)
+            if (_playerInfo.isInitialized())
             {
                 if (_client.pauseMouse)
                 {
