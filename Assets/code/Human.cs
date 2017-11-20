@@ -12,7 +12,6 @@ public class Human : MonoBehaviour {
 	// Use this for initialization
 	void Start () {
         //AudioMixer mixer = growl.outputAudioMixerGroup.audioMixer;
-        
 	}
 	
 	// Update is called once per frame

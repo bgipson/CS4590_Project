@@ -6,6 +6,8 @@ Assets/scenes.meta
 UnityPackageManager
 CS4590_Project.csproj
 CS4590_Project.sln
+Assets/code/HumanInfo.cs.meta
+build/*
 
 
 # Windows image file caches
