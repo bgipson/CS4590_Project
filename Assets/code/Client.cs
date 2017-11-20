@@ -12,14 +12,17 @@ public class Client : MonoBehaviour {
 
     NetworkClient client;
     public Text clientText;
-    
+
     public int xPosZombie = -1000;
     public int zPosZombie = 60;
 
     // need handles on these for events
     GameObject enemyText;
     GameObject connectToServer;
-    GameObject toggleMouse;
+    GameObject pauseText;
+    GameObject ipAddress;
+    GameObject ipAddressLabel;
+    GameObject ipAddressTextObject;
     public bool pauseMouse = false;
 
     Player player;
@@ -32,7 +35,7 @@ public class Client : MonoBehaviour {
         // called 0x times when started from menu
     }
 
-    // Use this for initialization
+    // Use this for initialization, called each time the scene is loaded
     void Start() {
         client = new NetworkClient();
         clientText.text = "STATUS: NOT CONNECTED";
@@ -45,7 +48,10 @@ public class Client : MonoBehaviour {
         client.RegisterHandler(MSG_NEW_HUMAN, onReceiveID);
         enemyText = GameObject.Find("enemyText");
         connectToServer = GameObject.Find("ConnectToServer");
-        toggleMouse = GameObject.Find("pauseText");
+        pauseText = GameObject.Find("pauseText");
+        ipAddressTextObject = GameObject.Find("ipAddressText");
+        ipAddress = GameObject.Find("ipAddress");
+        ipAddressLabel = GameObject.Find("ipAddressLabel");
         pauseMouse = false;
 
         EnableClientDisplays();
@@ -132,13 +138,55 @@ public class Client : MonoBehaviour {
         {
             return;
         }
-        playerInfo.setMessage("Connecting"); // can get stuck based on threading from a last session.
-        DisableClientDisplays();
-        client.Connect("127.0.0.1", 1234);
+        Text ipAddress = ipAddressTextObject.GetComponent<Text>();
+        bool isValid = CheckIPAddress(ipAddress.text);
+        if (isValid)
+        {
+            playerInfo.setMessage("Connecting"); // can get stuck based on threading from a last session.
+            client.Connect(ipAddress.text, 1234);
+        }
+    }
+
+    bool CheckIPAddress(string text)
+    {
+        string[] parsed = text.Split('.');
+        if (parsed.GetLength(0) != 4)
+        {
+            return false;
+        }
+        for (int i=0; i<4; i++)
+        {
+            int temp;
+            if (int.TryParse(parsed[i], out temp))
+            {
+                if (temp < 0 || temp > 255)
+                {
+                    return false;
+                }
+            }
+            else
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    bool CheckClientReady()
+    {
+        if (this == null)
+        {
+            return false;
+        }
+        return true;
     }
 
     void onReceiveID(NetworkMessage msg)
     {
+        if (!CheckClientReady())
+        {
+            return;
+        }
         if (!playerInfo.isInitialized())
         {
             NetworkMess details = msg.ReadMessage<NetworkMess>();
@@ -146,10 +194,15 @@ public class Client : MonoBehaviour {
             playerInfo.setMessage(""); // clear message
             client.Send(playerInfo.getID(), playerInfo);
             playerInfo.setInitialized(true);
+            DisableClientDisplays();
         }
     }
 
     void onReceivePosition(NetworkMessage msg) {
+        if (!CheckClientReady())
+        {
+            return;
+        }
         NetworkMess details = msg.ReadMessage<NetworkMess>();
         string[] pos = details.messageContents.Split(' ');
         zPosZombie = int.Parse(pos[0]);
@@ -179,8 +232,9 @@ public class Client : MonoBehaviour {
         pauseMouse = true;
         enemyText.SetActive(true);
         connectToServer.SetActive(false);
-        //exit.SetActive(false);
-        toggleMouse.SetActive(true);
+        ipAddress.SetActive(false);
+        ipAddressLabel.SetActive(false);
+        pauseText.SetActive(true);
         Cursor.visible = false;
         Cursor.lockState = CursorLockMode.Locked;
     }
@@ -190,8 +244,9 @@ public class Client : MonoBehaviour {
         pauseMouse = false;
         enemyText.SetActive(false);
         connectToServer.SetActive(true);
-        //exit.SetActive(true);
-        toggleMouse.SetActive(false);
+        ipAddress.SetActive(true);
+        ipAddressLabel.SetActive(true);
+        pauseText.SetActive(false);
         Cursor.visible = true;
         Cursor.lockState = CursorLockMode.None;
     }

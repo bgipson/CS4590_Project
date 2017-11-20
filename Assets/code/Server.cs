@@ -52,6 +52,7 @@ public class Server : MonoBehaviour {
                 players[i].getTimeStamp() > 0)
             {
                 print("Player timed out: " + players[i].getID());
+                NetworkServer.UnregisterHandler(players[i].getID());
                 players.RemoveAt(i);
             }
         }
@@ -91,6 +92,7 @@ public class Server : MonoBehaviour {
                 if (index != -1)
                 {
                     print("player disconnecting: " + players[index].getID());
+                    NetworkServer.UnregisterHandler(temp.getID());
                     players.RemoveAt(index);
                 }
             }
@@ -100,6 +102,7 @@ public class Server : MonoBehaviour {
         {
             players[index].setTimeStamp(Time.time);
             players[index].setPosition(temp.getPosition());
+            //print("x: " + temp.getPosition().x + " z: " + temp.getPosition().z);
         }
     }
 
