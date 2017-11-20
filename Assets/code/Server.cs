@@ -17,7 +17,7 @@ public class Server : MonoBehaviour {
     public InputField xField;
     public int port = 1234;
 
-    List<HumanInfo> humans;
+    List<PlayerInfo> players;
 
     public Server()
     {
@@ -28,13 +28,13 @@ public class Server : MonoBehaviour {
 
     // Use this for initialization
     void Start() {
-        humans = new List<HumanInfo>();
+        players = new List<PlayerInfo>();
         NetworkServer.Listen(port);
         NetworkServer.RegisterHandler(MsgType.Connect, onConnection);
         NetworkServer.RegisterHandler(MsgType.Disconnect, onDisnnection);
 
         serverText.text = "SERVER STARTED";
-        humansTotal.text = "Humans Total: " + humans.Count.ToString();
+        humansTotal.text = "Humans Total: " + players.Count.ToString();
     }
 
     // Update is called once per frame
@@ -47,8 +47,12 @@ public class Server : MonoBehaviour {
             serverText.text = "STATUS: RESPONDING";
             sendPosition();
         }
+        if (players.Count == 0)
+        {
+            serverText.text = "SERVER STARTED";
+        }
 
-        humansTotal.text = "Humans Total: " + humans.Count.ToString();
+        humansTotal.text = "Humans Total: " + players.Count.ToString();
     }
 
     //Handler for any incoming connection requests
@@ -56,7 +60,7 @@ public class Server : MonoBehaviour {
         short newPlayerID = GenerageUniquePlayerId();
         serverText.text = "STATUS: CONNECTION";
         NetworkServer.RegisterHandler(newPlayerID, OnPlayerUpdate);
-        humans.Add(new HumanInfo(newPlayerID));
+        players.Add(new PlayerInfo(newPlayerID));
 
         // send to player their ID
         NetworkMess msg = new NetworkMess();
@@ -67,29 +71,29 @@ public class Server : MonoBehaviour {
 
     void onDisnnection(NetworkMessage message)
     {
-        //HumanInfo temp = message.ReadMessage<HumanInfo>();
+        //PlayerInfo temp = message.ReadMessage<PlayerInfo>();
     }
 
     void OnPlayerUpdate(NetworkMessage message)
     {
-        HumanInfo temp = message.ReadMessage<HumanInfo>();
+        PlayerInfo temp = message.ReadMessage<PlayerInfo>();
         if (temp.getMessage().Equals("New Player"))
         {
-            for (int i = 0; i < humans.Count; i++)
+            for (int i = 0; i < players.Count; i++)
             {
-                if (humans[i].getID() == temp.getID())
+                if (players[i].getID() == temp.getID())
                 {
-                    humans[i].setX(temp.getX());
-                    humans[i].setY(temp.getY());
+                    players[i].setX(temp.getX());
+                    players[i].setY(temp.getY());
                     //print(temp.getX() + " " + temp.getY());
                 }
             }
         }
         else if (temp.getMessage().Equals("Disconnecting"))
         {
-            int index = FindHumanById(temp.getID());
+            int index = FindPlayerById(temp.getID());
             if (index != -1) {
-                humans.RemoveAt(index);
+                players.RemoveAt(index);
             }
         }
     }
@@ -97,9 +101,9 @@ public class Server : MonoBehaviour {
     short GenerageUniquePlayerId()
     {
         short newID = (short)Random.Range(1, SHRT_MAX);
-        for (int i=0; i<humans.Count; i++)
+        for (int i=0; i<players.Count; i++)
         {
-            if (humans[i].getID() == newID)
+            if (players[i].getID() == newID)
             {
                 i = 0;
                 newID = (short)Random.Range(1, SHRT_MAX);
@@ -123,11 +127,11 @@ public class Server : MonoBehaviour {
         SceneManager.LoadScene(0);
     }
 
-    int FindHumanById(short id)
+    int FindPlayerById(short id)
     {
-        for (int i=0; i<humans.Count; i++)
+        for (int i=0; i<players.Count; i++)
         {
-            if (humans[i].getID() == id)
+            if (players[i].getID() == id)
             {
                 return i;
             }

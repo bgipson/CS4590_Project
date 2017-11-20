@@ -3,7 +3,13 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Networking;
 
-public class HumanInfo : MessageBase {
+public class PlayerInfo : MessageBase {
+
+    public enum Type
+    {
+        HUMAN,
+        ZOMBIE
+    };
 
     // Warning: any default values will override actual values during a message
     public short ID;
@@ -11,13 +17,14 @@ public class HumanInfo : MessageBase {
     public float yPos;
     public bool initialized = false;
     public string message;
+    public Type playerType;
 
-    public HumanInfo()
+    public PlayerInfo()
     {
         // empty constructor must exist to send client -> server
     }
 
-    public HumanInfo(short idIn)
+    public PlayerInfo(short idIn)
     {
         ID = idIn;
     }
