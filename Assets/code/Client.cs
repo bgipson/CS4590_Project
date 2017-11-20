@@ -102,9 +102,13 @@ public class Client : MonoBehaviour {
     private void OnApplicationQuit()
     {
         clientText.text = "STATUS: NOT CONNECTED";
-        humanInfo.initialized = false;
+        
         humanInfo.setMessage("Disconnecting");
-        client.Send(humanInfo.getID(), humanInfo);
+        if (humanInfo.initialized)
+        {
+            client.Send(humanInfo.getID(), humanInfo);
+        }
+        humanInfo.initialized = false;
     }
 
     public void returnToMenu() {
