@@ -16,7 +16,7 @@ public class Client : MonoBehaviour {
     public int xPosZombie = -1000;
     public int zPosZombie = 60;
 
-    float timeBetweenGrowls = 7.0f;
+    float timeBetweenGrowls = 5.0f;
     float lastGrowl = 0.0f;
 
     // need handles on these for events

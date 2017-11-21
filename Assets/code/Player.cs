@@ -65,10 +65,10 @@ public class Player : MonoBehaviour {
 
 
                 float distance = Vector3.Distance(position, nearestPlayerOfInterest);
-                float volume = Mathf.Clamp((distance - 30.0f) / 100.0f, 0, 1);
-                print(volume);
-                baseAmbientTrack.volume = volume;
-                moreIntenseAmbientTrack.volume = Mathf.Clamp((2.0f*(100 - distance)) / 100, 0, 1);
+                print(distance);
+                float volumeBase = Mathf.Clamp((2*distance - 60.0f) / 100.0f, 0, 0.75f);
+                baseAmbientTrack.volume = volumeBase;
+                moreIntenseAmbientTrack.volume = Mathf.Clamp((2.0f*(100 - distance)) / 100, 0, 0.75f);
             }
         }
 	}
@@ -114,7 +114,7 @@ public class Player : MonoBehaviour {
 
     public void zombieUpdate(Vector3 zombiePosition) {
         float distance = Vector3.Distance(position, zombiePosition);
-        growl.volume = Mathf.Clamp((100 - distance) / 100, 0, 1);
+        growl.volume = Mathf.Clamp((100 - distance*0.5f) / 100.0f, 0, 1);
         growl.Play();
         //print((100 - distance) / 100);
     }
