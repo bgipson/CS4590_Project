@@ -10,6 +10,11 @@ public class Server : MonoBehaviour {
     short SHRT_MAX = 32767;
     short MSG_NEW_HUMAN = 1000;
     short MSG_POSITION = 100;
+    short MSG_RESET = 200;
+
+    // hard coded indices for now
+    int PATH = 0;
+    int CHASE = 1;
 
     public Text serverText;
     public Text humansTotal;
@@ -66,16 +71,30 @@ public class Server : MonoBehaviour {
         ControlNPCs();
         if (serverPlayers.Count > 0)
         {
+            UpdateZombiesOfHumans();
             sendZombieInfo();
         }
 
         humansTotal.text = "Humans Total: " + serverPlayers.Count.ToString();
     }
 
+    void UpdateZombiesOfHumans()
+    {
+        if (NPCs.Count >= 2)
+        {
+            NPCs[CHASE].setHumanPosition(serverPlayers[0].position);
+        }
+    }
+
     void setupNPCs()
     {
         // NOTE: these names must match between different scenes
-        NPC temp = GameObject.Find("zombiePath").GetComponent<NPC>();
+        NPC temp = GameObject.Find("zombiePath1").GetComponent<NPC>();
+        if (temp != null)
+        {
+            NPCs.Add(temp);
+        }
+        temp = GameObject.Find("zombieChase1").GetComponent<NPC>();
         if (temp != null)
         {
             NPCs.Add(temp);
@@ -174,6 +193,20 @@ public class Server : MonoBehaviour {
 
     public void returnToMenu() {
         SceneManager.LoadScene(0);
+    }
+
+    public void Restart()
+    {
+        NetworkMess msg = new NetworkMess();
+        msg.messageType = MSG_RESET;
+        NetworkServer.SendToAll(msg.messageType, msg);
+        NPCs[PATH].setPosition(new Vector3(-1000, 0, 60));
+        NPCs[PATH].setRotation(new Vector3(0, 145, 0));
+        NPCs[PATH].StartRoutine();
+
+        NPCs[CHASE].setPosition(new Vector3(-1110, 0, 450));
+        NPCs[CHASE].setRotation(new Vector3(0, 180, 0));
+        NPCs[CHASE].StartRoutine();
     }
 
     int FindPlayerById(short id)

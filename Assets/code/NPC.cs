@@ -31,11 +31,25 @@ public class NPC : MonoBehaviour {
     GameObject waypointActive;
     GameObject waypointNext;
     GameObject waypointLast;
+    bool returnFromChase;
+    Vector3 lastChasePosition;
     float speed = 10;
+
+    // human info
+    Vector3 hPosition;
 
     public NPC()
     {
         
+    }
+
+    public Vector3 getHumanPosition() { return hPosition; }
+
+    public void setHumanPosition(Vector3 pIn)
+    {
+        hPosition.x = pIn.x;
+        hPosition.y = pIn.y;
+        hPosition.z = pIn.z;
     }
 
     public Vector3 getPosition() { return position; }
@@ -72,10 +86,28 @@ public class NPC : MonoBehaviour {
 
     // Use this for initialization
     void Start () {
+        hPosition = new Vector3(-1000, 0, 0);
+        lastChasePosition = new Vector3(-1110, 0, 450);
+        returnFromChase = false;
+        StartRoutine();
+    }
+
+    public void StartRoutine()
+    {
+        string zombieBehavior = "";
+        if (behavior == Behavior.PATH)
+        {
+            zombieBehavior = "Path ";
+        }
+        if (behavior == Behavior.CHASE)
+        {
+            zombieBehavior = "Chase ";
+        }
+        waypoint = 0;
         waypoints = new List<GameObject>();
         lastRotation.y = rotation.y;
         int wpx = 0;
-        GameObject wp = GameObject.Find("Cube " + wpx);
+        GameObject wp = GameObject.Find(zombieBehavior + wpx);
         if (wp != null)
         {
             while (wp != null)
@@ -91,7 +123,7 @@ public class NPC : MonoBehaviour {
                 waypointLast = wp;
                 waypoints.Add(wp);
                 wpx++;
-                wp = GameObject.Find("Cube " + wpx);
+                wp = GameObject.Find(zombieBehavior + wpx);
             }
         }
     }
@@ -107,12 +139,57 @@ public class NPC : MonoBehaviour {
                     MoveBetweenPoints();
                 }
             }
+            if (behavior == Behavior.CHASE)
+            {
+                //@TODO: logic here for chase
+                Vector3 localGoal = Destination.goal;
+                localGoal.y = 0;
+                float distanceToGoal = Vector3.Distance(hPosition, localGoal);
+                if (distanceToGoal > 25)
+                {
+                    if (waypoints.Count > 1)
+                    {
+                        float distance = Vector3.Distance(hPosition, position);
+                        if (distance < 50)
+                        {
+                            returnFromChase = true;
+                            Vector3 lookat = hPosition;
+                            lookat.y = 0;
+                            transform.LookAt(lookat);
+                            rotation = transform.forward;
+                            UpdateLookHeading();
+                            position = position + transform.forward * speed * Time.deltaTime;
+                            lastChasePosition = position;
+                        }
+                        else
+                        {
+                            MoveBetweenPoints();
+                        }
+                    }
+                }
+            }
+            transform.position = position;
+            transform.eulerAngles = rotation;
         }
 	}
 
+    void UpdateLookHeading()
+    {
+        rotation = Quaternion.LookRotation(transform.forward, Vector3.up).eulerAngles;
+    }
+
+    Vector3 GetFromWaypoint()
+    {
+        if (returnFromChase)
+        {
+            return lastChasePosition;
+        }
+        return waypointActive.GetComponent<Transform>().position;
+    }
+
     void MoveBetweenPoints()
     {
-        Vector3 a = waypointActive.GetComponent<Transform>().position;
+        Vector3 a = GetFromWaypoint();
         Vector3 b = waypointNext.GetComponent<Transform>().position;
         float edgeDistance = Vector3.Distance(a, b);
         float distSoFar = Vector3.Distance(a, position);
@@ -143,6 +220,7 @@ public class NPC : MonoBehaviour {
 
         if (totalDist > edgeDistance)
         {
+            returnFromChase = false;
             position = b;
             lastRotation.y = rotation.y;
             waypoint++;

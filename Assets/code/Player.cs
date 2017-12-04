@@ -11,31 +11,43 @@ public class Player : MonoBehaviour {
     public Vector3 position;
     public Vector3 nearestPlayerOfInterest;
     public float heading;
-    float defaultHeading;
+    public float defaultHeading;
     public Vector3 headingVector;
     Vector3 upVector = new Vector3(0, 1, 0);
     Camera _camera;
     PlayerInfo _playerInfo;
     float speed = 0.25f;
     float speedHorizontal = 100f;
+    float maxVarioVolume = 0.5f;
+
+    // spawn
+    public Vector3 spawnPoint;
 
     // variometer
     float lastBeep;
     float timeBetweenBeeps; // 0.26 0.13 silence, duration 0.26 0.13
 
+    // zombies
+    public GameObject zombiePath1;
+    public GameObject zombieChase1;
+
     static Vector3 worldCoordinateBaseOffset = new Vector3(-1000, 5, 0);
 
+    public bool performGrowl;
+    float lastPauseHeading;
     public AudioSource growl;
     public AudioSource baseAmbientTrack;
     public AudioSource moreIntenseAmbientTrack;
     public AudioSource variometer;
     public AudioSource variometerBG;
     public AudioSource variometerBeep;
+    public AudioSource sine440short;
     // Use this for initialization
     void Start () {
 
         nearestPlayerOfInterest = new Vector3(-1000, 0, 60);
-
+        performGrowl = false;
+        lastPauseHeading = Time.time;
         // read in camera
         // also read in client
         _camera = Camera.main;
@@ -49,6 +61,28 @@ public class Player : MonoBehaviour {
         headingVector = new Vector3(eulerAngles.x, eulerAngles.y, eulerAngles.z);
         lastBeep = Time.time;
         timeBetweenBeeps = 0.26f;
+        spawnPoint = new Vector3(-1000, 5, 0);
+    }
+
+    void CalculateNearestZombie()
+    {
+        nearestPlayerOfInterest = Vector3.zero;
+        float lowestDistance = Vector3.Distance(position, nearestPlayerOfInterest);
+        float distancePath = Vector3.Distance(position, zombiePath1.transform.position);
+        if (distancePath < lowestDistance)
+        {
+            lowestDistance = distancePath;
+            nearestPlayerOfInterest = zombiePath1.transform.position;
+        }
+        float distanceChase = Vector3.Distance(position, zombieChase1.transform.position);
+        if (distanceChase < lowestDistance)
+        {
+            lowestDistance = distanceChase;
+            nearestPlayerOfInterest = zombieChase1.transform.position;
+        }
+
+        _client.enemyText.GetComponent<Text>().text = "Distance: " + lowestDistance.ToString("#");
+        //nearestPlayerOfInterest;
     }
 
     // Update is called once per frame
@@ -70,19 +104,54 @@ public class Player : MonoBehaviour {
                     CalculateHeading();
                     UpdatePosition();
                 }
-                // update heading
+                CalculateNearestZombie();
 
-
+                Vector3 edgeVector = nearestPlayerOfInterest - position;
+                edgeVector.Normalize();
                 float distance = Vector3.Distance(position, nearestPlayerOfInterest);
-                //print(distance);
+                if (distance < 7)
+                {
+                    position = spawnPoint;
+                    _camera.transform.position = position;
+                    UpdateHeading(defaultHeading);
+                }
+                if (performGrowl)
+                {
+                    performGrowl = false;
+                    growl.volume = 2f*Mathf.Clamp((75f - distance) / 75f, 0, 1);
+                    growl.Play();
+                }
+
                 float volumeBase = Mathf.Clamp((2*distance - 60.0f) / 100.0f, 0, 0.75f);
                 baseAmbientTrack.volume = volumeBase;
                 moreIntenseAmbientTrack.volume = Mathf.Clamp((2.0f*(100 - distance)) / 100, 0, 0.75f);
 
-                // variometer
-                if (distance > 0 && distance < 50)
+                float directionDelay = Mathf.Abs(Vector3.Dot(_camera.transform.forward.normalized, edgeVector));
+                directionDelay = 5f*(1.01f - directionDelay);
+                print(directionDelay);
+                if (distance < 100)
                 {
-                    variometerBG.volume = 1;
+                    if (lastPauseHeading + directionDelay < Time.time)
+                    {
+                        lastPauseHeading = Time.time;
+                        sine440short.Pause();
+                    }
+                    if (lastPauseHeading + 0.5*directionDelay < Time.time)
+                    {
+                        if (!sine440short.isPlaying)
+                        {
+                            sine440short.Play();
+                        }
+                    }
+                        
+                    sine440short.volume = 1.5f*(100f - distance) / 50f;
+                    return;
+                }
+                
+                // variometer
+                if (distance > 5 && distance < 55)
+                {
+                    variometerBG.volume = maxVarioVolume;
                     variometer.volume = 0;
 
                     // min 10
@@ -104,17 +173,17 @@ public class Player : MonoBehaviour {
                     variometerBG.volume = 0;
                 }
 
-                if (distance < 80 && distance > 50)
+                if (distance < 85 && distance > 55)
                 {
                     variometer.pitch = 1 + 1*((80 - distance)/30f);
-                    variometer.volume = 1;
+                    variometer.volume = maxVarioVolume;
                 } 
-                if (distance > 80 && distance < 120)
+                if (distance > 85 && distance < 125)
                 {
                     variometer.pitch = 1;
-                    variometer.volume = ((120-distance)/40f);
+                    variometer.volume = maxVarioVolume*((125-distance)/40f);
                 }
-                if (distance > 120)
+                if (distance > 125)
                 {
                     variometer.volume = 0;
                 }
@@ -128,13 +197,10 @@ public class Player : MonoBehaviour {
 
         Vector3 eulerAngles = _camera.transform.rotation.eulerAngles;
         float newY = eulerAngles.y + rotate;
-        _camera.transform.rotation = Quaternion.Euler(
-            _camera.transform.rotation.eulerAngles.x,
-            newY,
-            _camera.transform.rotation.eulerAngles.z);
+        UpdateHeading(newY);
     }
 
-    public void ResetSettings()
+    public void ResetPositionSettings()
     {
         position = new Vector3(worldCoordinateBaseOffset.x,
             worldCoordinateBaseOffset.y,
@@ -151,6 +217,20 @@ public class Player : MonoBehaviour {
         _camera.transform.position = position;
     }
 
+    public void SetPosition(Vector3 posIn)
+    {
+        position = posIn;
+        _camera.transform.position = position;
+    }
+
+    public void UpdateHeading(float headingIn)
+    {
+        _camera.transform.rotation = Quaternion.Euler(
+            _camera.transform.rotation.eulerAngles.x,
+            headingIn,
+            _camera.transform.rotation.eulerAngles.z);
+    }
+
     void CalculateHeading()
     {
         position.x = _camera.transform.position.x;
@@ -159,13 +239,6 @@ public class Player : MonoBehaviour {
         heading = _camera.transform.rotation.eulerAngles.y;
         headingVector.x = Mathf.Sin((heading * Mathf.PI) / 180f);
         headingVector.z = Mathf.Cos((heading * Mathf.PI) / 180f);
-    }
-
-    public void zombieUpdate(Vector3 zombiePosition) {
-        //float distance = Vector3.Distance(position, zombiePosition);
-        //growl.volume = Mathf.Clamp((100 - distance*0.5f) / 100.0f, 0, 1);
-        //growl.Play();
-        //print((100 - distance) / 100);
     }
 
     public void ManageBackgroundAudio()

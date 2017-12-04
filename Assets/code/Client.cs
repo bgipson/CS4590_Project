@@ -9,15 +9,16 @@ public class Client : MonoBehaviour {
 
     short MSG_NEW_HUMAN = 1000;
     short MSG_POSITION = 100;
+    short MSG_RESET = 200;
 
     NetworkClient client;
     public Text clientText;
 
-    float timeBetweenGrowls = 5.0f;
+    float timeBetweenGrowls = 6.0f;
     float lastGrowl = 0.0f;
 
     // need handles on these for events
-    GameObject enemyText;
+    public GameObject enemyText;
     GameObject connectToServer;
     GameObject pauseText;
     GameObject ipAddress;
@@ -30,7 +31,8 @@ public class Client : MonoBehaviour {
     PlayerInfo playerInfo;
 
     // NPCs
-    GameObject zombiePath;
+    GameObject zombiePath1;
+    GameObject zombieChase1;
 
     public Client() // construct before start()
     {
@@ -50,6 +52,7 @@ public class Client : MonoBehaviour {
         client.RegisterHandler(MsgType.Disconnect, OnDisconnected);
         client.RegisterHandler(MSG_POSITION, onReceivePosition);
         client.RegisterHandler(MSG_NEW_HUMAN, onReceiveID);
+        client.RegisterHandler(MSG_RESET, onReset);
         enemyText = GameObject.Find("enemyText");
         connectToServer = GameObject.Find("ConnectToServer");
         pauseText = GameObject.Find("pauseText");
@@ -58,7 +61,10 @@ public class Client : MonoBehaviour {
         ipAddressLabel = GameObject.Find("ipAddressLabel");
         pauseMouse = false;
 
-        zombiePath = GameObject.Find("zombiePath");
+        zombiePath1 = GameObject.Find("zombiePath1");
+        player.zombiePath1 = zombiePath1;
+        zombieChase1 = GameObject.Find("zombieChase1");
+        player.zombieChase1 = zombieChase1;
 
         EnableClientDisplays();
     }
@@ -77,7 +83,7 @@ public class Client : MonoBehaviour {
         // Disconnected by server
         clientText.text = "STATUS: NOT CONNECTED";
         playerInfo.setInitialized(false);
-        player.ResetSettings(); // handles playerInfo too
+        player.ResetPositionSettings(); // handles playerInfo too
     }
 
     // Update is called once per frame
@@ -94,16 +100,15 @@ public class Client : MonoBehaviour {
             {
                 return;
             }
-            // send updated position to server
+            // send updated position to server every update
             CopyPlayerDataToInfo();
             client.Send(playerInfo.getID(), playerInfo);
 
             // handle audio
             if (lastGrowl + timeBetweenGrowls < Time.time)
             {
-                //print("growling" + lastGrowl + "          " + Time.time);
                 lastGrowl = Time.time;
-                player.zombieUpdate(player.nearestPlayerOfInterest);
+                player.performGrowl = true;
             }
             player.ManageBackgroundAudio();
         } else
@@ -195,6 +200,15 @@ public class Client : MonoBehaviour {
         return true;
     }
 
+    void onReset(NetworkMessage msg)
+    {
+        if (player != null)
+        {
+            player.SetPosition(player.spawnPoint);
+            player.UpdateHeading(player.defaultHeading);
+        }
+    }
+
     void onReceiveID(NetworkMessage msg)
     {
         if (!CheckClientReady())
@@ -220,11 +234,15 @@ public class Client : MonoBehaviour {
         NetworkMess details = msg.ReadMessage<NetworkMess>();
         //clientText.text = "NEW MESSAGE: " +  details.messageContents;
 
-        if (details.name.Equals("zombiePath"))
+        if (details.name.Equals("zombiePath1"))
         {
-            zombiePath.transform.position = details.position;
-            zombiePath.transform.eulerAngles = details.rotation;
-            player.nearestPlayerOfInterest = details.position;
+            zombiePath1.transform.position = details.position;
+            zombiePath1.transform.eulerAngles = details.rotation;
+        }
+        if (details.name.Equals("zombieChase1"))
+        {
+            zombieChase1.transform.position = details.position;
+            zombieChase1.transform.eulerAngles = details.rotation;
         }
     }
 
@@ -245,6 +263,7 @@ public class Client : MonoBehaviour {
 
     public void DisableClientDisplays()
     {
+        // in game mode
         pauseMouse = true;
         enemyText.SetActive(true);
         connectToServer.SetActive(false);
@@ -259,12 +278,13 @@ public class Client : MonoBehaviour {
             player.moreIntenseAmbientTrack.Play();
             player.variometer.Play();
             player.variometerBG.Play();
-            player.variometerBeep.Play();
+            player.sine440short.Play();
         }
     }
 
     public void EnableClientDisplays()
     {
+        // outside server display
         pauseMouse = false;
         enemyText.SetActive(false);
         connectToServer.SetActive(true);
@@ -280,6 +300,7 @@ public class Client : MonoBehaviour {
             player.variometer.Stop();
             player.variometerBG.Stop();
             player.variometerBeep.Stop();
+            player.sine440short.Stop();
         }
     }
 
@@ -299,7 +320,7 @@ public class Client : MonoBehaviour {
         {
             playerInfo.setInitialized(false);
             playerInfo.setMessage("Disconnecting");
-            player.ResetSettings(); // handles playerInfo too
+            player.ResetPositionSettings(); // handles playerInfo too
             if (playerInfo.getID() != 0)
             {
                 client.Send(playerInfo.getID(), playerInfo);
