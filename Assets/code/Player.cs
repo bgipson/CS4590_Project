@@ -145,7 +145,6 @@ public class Player : MonoBehaviour {
                     }
                         
                     sine440short.volume = 1.5f*(100f - distance) / 50f;
-                    return;
                 }
                 
                 // variometer
