@@ -18,7 +18,11 @@ public class Server : MonoBehaviour {
     public int port = 1234;
     public float maxTimeBeforeKick = 5.0f;
 
-    List<PlayerInfo> players;
+    // players
+    List<PlayerInfo> serverPlayers;
+
+    // zombie walking around
+    List<NPC> NPCs;
 
     public Server()
     {
@@ -29,34 +33,70 @@ public class Server : MonoBehaviour {
 
     // Use this for initialization
     void Start() {
-        players = new List<PlayerInfo>();
+        serverPlayers = new List<PlayerInfo>();
+        NPCs = new List<NPC>();
         NetworkServer.Listen(port);
         NetworkServer.RegisterHandler(MsgType.Connect, onConnection);
         NetworkServer.RegisterHandler(MsgType.Disconnect, onDisnnection);
 
         serverText.text = "SERVER STARTED";
-        humansTotal.text = "Humans Total: " + players.Count.ToString();
+        humansTotal.text = "Humans Total: " + serverPlayers.Count.ToString();
+
+        // setup NPC
+        setupNPCs();
     }
 
     // Update is called once per frame
     void Update() {
-        if (players.Count == 0)
+        if (serverPlayers.Count == 0)
         {
             serverText.text = "SERVER STARTED";
         }
         // check if players have timed out
-        for (int i=players.Count-1; i>=0; i--) // must go backward when deleting
+        for (int i=serverPlayers.Count-1; i>=0; i--) // must go backward when deleting
         {
-            if ((players[i].getTimeStamp() + maxTimeBeforeKick < Time.time) &&
-                players[i].getTimeStamp() > 0)
+            if ((serverPlayers[i].getTimeStamp() + maxTimeBeforeKick < Time.time) &&
+                serverPlayers[i].getTimeStamp() > 0)
             {
-                print("Player timed out: " + players[i].getID());
-                NetworkServer.UnregisterHandler(players[i].getID());
-                players.RemoveAt(i);
+                print("Player timed out: " + serverPlayers[i].getID());
+                NetworkServer.UnregisterHandler(serverPlayers[i].getID());
+                serverPlayers.RemoveAt(i);
             }
         }
+        ControlNPCs();
+        if (serverPlayers.Count > 0)
+        {
+            sendZombieInfo();
+        }
 
-        humansTotal.text = "Humans Total: " + players.Count.ToString();
+        humansTotal.text = "Humans Total: " + serverPlayers.Count.ToString();
+    }
+
+    void setupNPCs()
+    {
+        // NOTE: these names must match between different scenes
+        NPC temp = GameObject.Find("zombiePath").GetComponent<NPC>();
+        if (temp != null)
+        {
+            NPCs.Add(temp);
+        }
+    }
+
+    void ControlNPCs()
+    {
+        if (serverPlayers.Count > 0)
+        {
+            for (int i=0; i<NPCs.Count; i++)
+            {
+                NPCs[i].setCanMove(true);
+            }
+        } else
+        {
+            for (int i = 0; i < NPCs.Count; i++)
+            {
+                NPCs[i].setCanMove(false);
+            }
+        }
     }
 
     //Handler for any incoming connection requests
@@ -66,7 +106,7 @@ public class Server : MonoBehaviour {
         NetworkServer.RegisterHandler(newPlayerID, OnPlayerUpdate);
         PlayerInfo newPlayer = new PlayerInfo(newPlayerID);
         newPlayer.Init();
-        players.Add(newPlayer);
+        serverPlayers.Add(newPlayer);
 
         // send to player their ID
         NetworkMess msg = new NetworkMess();
@@ -90,17 +130,17 @@ public class Server : MonoBehaviour {
                 index = FindPlayerById(temp.getID());
                 if (index != -1)
                 {
-                    print("player disconnecting: " + players[index].getID());
+                    print("player disconnecting: " + serverPlayers[index].getID());
                     NetworkServer.UnregisterHandler(temp.getID());
-                    players.RemoveAt(index);
+                    serverPlayers.RemoveAt(index);
                 }
             }
         }
         index = FindPlayerById(temp.getID());
         if (index != -1)
         {
-            players[index].setTimeStamp(Time.time);
-            players[index].setPosition(temp.getPosition());
+            serverPlayers[index].setTimeStamp(Time.time);
+            serverPlayers[index].setPosition(temp.getPosition());
             //print("x: " + temp.getPosition().x + " z: " + temp.getPosition().z);
         }
     }
@@ -108,9 +148,9 @@ public class Server : MonoBehaviour {
     short GenerageUniquePlayerId()
     {
         short newID = (short)Random.Range(1, SHRT_MAX);
-        for (int i=0; i<players.Count; i++)
+        for (int i=0; i<serverPlayers.Count; i++)
         {
-            if (players[i].getID() == newID)
+            if (serverPlayers[i].getID() == newID)
             {
                 i = 0;
                 newID = (short)Random.Range(1, SHRT_MAX);
@@ -119,15 +159,17 @@ public class Server : MonoBehaviour {
         return newID;
     }
 
-    public void sendPosition() {
+    public void sendZombieInfo()
+    {
         NetworkMess msg = new NetworkMess();
-        if (yField.text == "" || xField.text == "") {
-            msg.messageContents = "N/A";
-        } else {
-            msg.messageContents = yField.text + " " + xField.text;
+        for (int i=0; i<NPCs.Count; i++)
+        {
+            msg.position = NPCs[i].getPosition();
+            msg.rotation = NPCs[i].getRotation();
+            msg.name = NPCs[i].getName();
+            msg.messageType = MSG_POSITION;
+            NetworkServer.SendToAll(msg.messageType, msg);
         }
-        NetworkServer.SendToAll(MSG_POSITION, msg);
-        serverText.text = "STATUS: CONNECTED";
     }
 
     public void returnToMenu() {
@@ -136,9 +178,9 @@ public class Server : MonoBehaviour {
 
     int FindPlayerById(short id)
     {
-        for (int i=0; i<players.Count; i++)
+        for (int i=0; i<serverPlayers.Count; i++)
         {
-            if (players[i].getID() == id)
+            if (serverPlayers[i].getID() == id)
             {
                 return i;
             }

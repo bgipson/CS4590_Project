@@ -19,11 +19,18 @@ public class Player : MonoBehaviour {
     float speed = 0.25f;
     float speedHorizontal = 100f;
 
+    // variometer
+    float lastBeep;
+    float timeBetweenBeeps; // 0.26 0.13 silence, duration 0.26 0.13
+
     static Vector3 worldCoordinateBaseOffset = new Vector3(-1000, 5, 0);
 
     public AudioSource growl;
     public AudioSource baseAmbientTrack;
     public AudioSource moreIntenseAmbientTrack;
+    public AudioSource variometer;
+    public AudioSource variometerBG;
+    public AudioSource variometerBeep;
     // Use this for initialization
     void Start () {
 
@@ -40,6 +47,8 @@ public class Player : MonoBehaviour {
         heading = eulerAngles.y;
         defaultHeading = heading;
         headingVector = new Vector3(eulerAngles.x, eulerAngles.y, eulerAngles.z);
+        lastBeep = Time.time;
+        timeBetweenBeeps = 0.26f;
     }
 
     // Update is called once per frame
@@ -65,10 +74,50 @@ public class Player : MonoBehaviour {
 
 
                 float distance = Vector3.Distance(position, nearestPlayerOfInterest);
-                print(distance);
+                //print(distance);
                 float volumeBase = Mathf.Clamp((2*distance - 60.0f) / 100.0f, 0, 0.75f);
                 baseAmbientTrack.volume = volumeBase;
                 moreIntenseAmbientTrack.volume = Mathf.Clamp((2.0f*(100 - distance)) / 100, 0, 0.75f);
+
+                // variometer
+                if (distance > 0 && distance < 50)
+                {
+                    variometerBG.volume = 1;
+                    variometer.volume = 0;
+
+                    // min 10
+                    //timeBetweenBeeps = 0.26f - 0.13f*Mathf.Clamp(((50f - distance)/(40f)), 0f, 1f);
+                    timeBetweenBeeps = 0.26f - 0.13f * Mathf.Clamp((-1/40f)*distance + 1.25f, 0f, 1f);
+                    if (lastBeep + timeBetweenBeeps*1.5 < Time.time)
+                    {
+                        variometerBeep.pitch = 1 + 2* Mathf.Clamp((-1 / 40f) * distance + 1.25f, 0f, 1f);
+                        variometerBeep.Play();
+                        lastBeep = Time.time;
+                    }
+                }
+                else
+                {
+                    lastBeep = Time.time;
+                    //also stop playing beep if playing
+                    variometerBeep.Stop();
+
+                    variometerBG.volume = 0;
+                }
+
+                if (distance < 80 && distance > 50)
+                {
+                    variometer.pitch = 1 + 1*((80 - distance)/30f);
+                    variometer.volume = 1;
+                } 
+                if (distance > 80 && distance < 120)
+                {
+                    variometer.pitch = 1;
+                    variometer.volume = ((120-distance)/40f);
+                }
+                if (distance > 120)
+                {
+                    variometer.volume = 0;
+                }
             }
         }
 	}
@@ -113,9 +162,9 @@ public class Player : MonoBehaviour {
     }
 
     public void zombieUpdate(Vector3 zombiePosition) {
-        float distance = Vector3.Distance(position, zombiePosition);
-        growl.volume = Mathf.Clamp((100 - distance*0.5f) / 100.0f, 0, 1);
-        growl.Play();
+        //float distance = Vector3.Distance(position, zombiePosition);
+        //growl.volume = Mathf.Clamp((100 - distance*0.5f) / 100.0f, 0, 1);
+        //growl.Play();
         //print((100 - distance) / 100);
     }
 

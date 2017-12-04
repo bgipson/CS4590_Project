@@ -9,7 +9,8 @@ public class PlayerInfo : MessageBase {
     {
         NONE,
         HUMAN,
-        ZOMBIE
+        ZOMBIE,
+        NPC
     };
 
     // Warning: any default values will override actual values during a message
@@ -20,6 +21,7 @@ public class PlayerInfo : MessageBase {
     public string message;
     public float timeStamp; // only really used for server
     public Type playerType;
+    public float rotation;
 
     public PlayerInfo()
     {
@@ -77,6 +79,13 @@ public class PlayerInfo : MessageBase {
     public void setTimeStamp(float timeStampIn)
     {
         timeStamp = timeStampIn;
+    }
+
+    public float getRotation() { return rotation; }
+
+    public void setRotation(float rotateIn)
+    {
+        rotation = rotateIn;
     }
 
     // Use this for initialization

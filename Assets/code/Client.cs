@@ -13,9 +13,6 @@ public class Client : MonoBehaviour {
     NetworkClient client;
     public Text clientText;
 
-    public int xPosZombie = -1000;
-    public int zPosZombie = 60;
-
     float timeBetweenGrowls = 5.0f;
     float lastGrowl = 0.0f;
 
@@ -28,8 +25,12 @@ public class Client : MonoBehaviour {
     GameObject ipAddressTextObject;
     public bool pauseMouse = false;
 
+    // player
     Player player;
     PlayerInfo playerInfo;
+
+    // NPCs
+    GameObject zombiePath;
 
     public Client() // construct before start()
     {
@@ -56,6 +57,8 @@ public class Client : MonoBehaviour {
         ipAddress = GameObject.Find("ipAddress");
         ipAddressLabel = GameObject.Find("ipAddressLabel");
         pauseMouse = false;
+
+        zombiePath = GameObject.Find("zombiePath");
 
         EnableClientDisplays();
     }
@@ -215,12 +218,14 @@ public class Client : MonoBehaviour {
             return;
         }
         NetworkMess details = msg.ReadMessage<NetworkMess>();
-        string[] pos = details.messageContents.Split(' ');
-        zPosZombie = int.Parse(pos[0]);
-        xPosZombie = int.Parse(pos[1]);
-        Vector3 position = new Vector3(zPosZombie, 0, xPosZombie);
-        player.zombieUpdate(position);
-        clientText.text = "NEW MESSAGE: " +  details.messageContents;
+        //clientText.text = "NEW MESSAGE: " +  details.messageContents;
+
+        if (details.name.Equals("zombiePath"))
+        {
+            zombiePath.transform.position = details.position;
+            zombiePath.transform.eulerAngles = details.rotation;
+            player.nearestPlayerOfInterest = details.position;
+        }
     }
 
     private void OnApplicationQuit()
@@ -252,6 +257,9 @@ public class Client : MonoBehaviour {
         {
             player.baseAmbientTrack.Play();
             player.moreIntenseAmbientTrack.Play();
+            player.variometer.Play();
+            player.variometerBG.Play();
+            player.variometerBeep.Play();
         }
     }
 
@@ -269,6 +277,9 @@ public class Client : MonoBehaviour {
         {
             player.baseAmbientTrack.Stop();
             player.moreIntenseAmbientTrack.Stop();
+            player.variometer.Stop();
+            player.variometerBG.Stop();
+            player.variometerBeep.Stop();
         }
     }
 

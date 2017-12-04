@@ -11,6 +11,8 @@ public class NetworkMess : MessageBase {
 
     public string messageContents;
     public int id;
-    public int type;
-
+    public short messageType;
+    public Vector3 position;
+    public Vector3 rotation;
+    public string name;
 }

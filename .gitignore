@@ -6,6 +6,7 @@ Library/*
 build/*
 Temp/*
 UnityPackageManager/*
+demo_build/*
 
 
 # Windows image file caches
