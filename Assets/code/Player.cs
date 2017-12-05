@@ -18,7 +18,7 @@ public class Player : MonoBehaviour {
     PlayerInfo _playerInfo;
     float speed = 0.25f;
     float speedHorizontal = 100f;
-    float maxVarioVolume = 0.5f;
+    float maxVarioVolume = 1f;
 
     // spawn
     public Vector3 spawnPoint;
@@ -67,14 +67,16 @@ public class Player : MonoBehaviour {
     void CalculateNearestZombie()
     {
         nearestPlayerOfInterest = Vector3.zero;
-        float lowestDistance = Vector3.Distance(position, nearestPlayerOfInterest);
-        float distancePath = Vector3.Distance(position, zombiePath1.transform.position);
+        Vector3 groundPosition = position;
+        groundPosition.y = 0;
+        float lowestDistance = Vector3.Distance(groundPosition, nearestPlayerOfInterest);
+        float distancePath = Vector3.Distance(groundPosition, zombiePath1.transform.position);
         if (distancePath < lowestDistance)
         {
             lowestDistance = distancePath;
             nearestPlayerOfInterest = zombiePath1.transform.position;
         }
-        float distanceChase = Vector3.Distance(position, zombieChase1.transform.position);
+        float distanceChase = Vector3.Distance(groundPosition, zombieChase1.transform.position);
         if (distanceChase < lowestDistance)
         {
             lowestDistance = distanceChase;
@@ -106,10 +108,12 @@ public class Player : MonoBehaviour {
                 }
                 CalculateNearestZombie();
 
-                Vector3 edgeVector = nearestPlayerOfInterest - position;
+                Vector3 positionOnGround = position;
+                positionOnGround.y = 0;
+                Vector3 edgeVector = nearestPlayerOfInterest - positionOnGround;
                 edgeVector.Normalize();
-                float distance = Vector3.Distance(position, nearestPlayerOfInterest);
-                if (distance < 7)
+                float distance = Vector3.Distance(positionOnGround, nearestPlayerOfInterest);
+                if (distance < 2)
                 {
                     position = spawnPoint;
                     _camera.transform.position = position;
@@ -127,16 +131,18 @@ public class Player : MonoBehaviour {
                 moreIntenseAmbientTrack.volume = Mathf.Clamp((2.0f*(100 - distance)) / 100, 0, 0.75f);
 
                 float directionDelay = Mathf.Abs(Vector3.Dot(_camera.transform.forward.normalized, edgeVector));
-                directionDelay = 5f*(1.01f - directionDelay);
-                print(directionDelay);
-                if (distance < 100)
+                directionDelay = Mathf.Pow(directionDelay, 0.8f);
+                float directionDelayAdjusted = 5f * (1.025f - directionDelay);
+                //float directionDelayAdjusted = 1f * (1.25f - directionDelay);
+                //print(directionDelay);
+                if (distance < 75) // directional heading
                 {
-                    if (lastPauseHeading + directionDelay < Time.time)
+                    if (lastPauseHeading + directionDelayAdjusted < Time.time)
                     {
                         lastPauseHeading = Time.time;
                         sine440short.Pause();
                     }
-                    if (lastPauseHeading + 0.5*directionDelay < Time.time)
+                    if (lastPauseHeading + 0.5* directionDelayAdjusted < Time.time)
                     {
                         if (!sine440short.isPlaying)
                         {
@@ -144,7 +150,7 @@ public class Player : MonoBehaviour {
                         }
                     }
                         
-                    sine440short.volume = 1.5f*(100f - distance) / 50f;
+                    sine440short.volume = Mathf.Min((75f - distance) / 37.5f, 1f);
                 }
                 
                 // variometer
