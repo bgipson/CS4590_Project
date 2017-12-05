@@ -10,6 +10,7 @@ public class Client : MonoBehaviour {
     short MSG_NEW_HUMAN = 1000;
     short MSG_POSITION = 100;
     short MSG_RESET = 200;
+    short MSG_SOS = 500;
 
     NetworkClient client;
     public Text clientText;
@@ -19,6 +20,7 @@ public class Client : MonoBehaviour {
 
     // need handles on these for events
     public GameObject enemyText;
+    public GameObject sosSound;
     GameObject connectToServer;
     GameObject pauseText;
     GameObject ipAddress;
@@ -53,6 +55,7 @@ public class Client : MonoBehaviour {
         client.RegisterHandler(MSG_POSITION, onReceivePosition);
         client.RegisterHandler(MSG_NEW_HUMAN, onReceiveID);
         client.RegisterHandler(MSG_RESET, onReset);
+        client.RegisterHandler(MSG_SOS, onSos);
         enemyText = GameObject.Find("enemyText");
         connectToServer = GameObject.Find("ConnectToServer");
         pauseText = GameObject.Find("pauseText");
@@ -69,6 +72,11 @@ public class Client : MonoBehaviour {
         EnableClientDisplays();
     }
 
+    public void onSos(NetworkMessage msg) {
+        NetworkMess mess = msg.ReadMessage<NetworkMess>();
+        Vector3 soundPos = mess.position;
+        Instantiate(sosSound, soundPos, Quaternion.identity);
+    }
     public PlayerInfo getPlayerInfo()
     {
         return playerInfo;
@@ -124,8 +132,24 @@ public class Client : MonoBehaviour {
         HandleKeyboard();
     }
 
+    
     void HandleKeyboard()
     {
+        //SOS
+        if (Input.GetKeyDown(KeyCode.Z)) {
+            NetworkMess sosMess = new NetworkMess();
+            sosMess.messageType = MSG_SOS;
+            sosMess.position = playerInfo.position;
+            sosMess.position = player.gameObject.transform.position;
+            sosMess.rotation = player.gameObject.transform.rotation.eulerAngles;
+            client.Send(sosMess.messageType, sosMess);
+        }
+
+        //COMING FOR HELP
+        if (Input.GetKeyDown(KeyCode.X)) {
+
+        }
+
         if (Input.GetKeyDown(KeyCode.Escape))
         {
             if (playerInfo.isInitialized())

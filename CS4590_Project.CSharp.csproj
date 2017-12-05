@@ -78,11 +78,14 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Assets\Client.cs" />
-    <Compile Include="Assets\Human.cs" />
-    <Compile Include="Assets\MenuController.cs" />
-    <Compile Include="Assets\NetworkMess.cs" />
-    <Compile Include="Assets\Server.cs" />
+    <Compile Include="Assets\code\Client.cs" />
+    <Compile Include="Assets\code\Destination.cs" />
+    <Compile Include="Assets\code\MenuController.cs" />
+    <Compile Include="Assets\code\NPC.cs" />
+    <Compile Include="Assets\code\NetworkMess.cs" />
+    <Compile Include="Assets\code\Player.cs" />
+    <Compile Include="Assets\code\PlayerInfo.cs" />
+    <Compile Include="Assets\code\Server.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath)\SyntaxTree\UnityVS\2015\UnityVS.CSharp.targets" />
 </Project>

@@ -11,6 +11,7 @@ public class Server : MonoBehaviour {
     short MSG_NEW_HUMAN = 1000;
     short MSG_POSITION = 100;
     short MSG_RESET = 200;
+    short MSG_SOS = 500;
 
     // hard coded indices for now
     int PATH = 0;
@@ -43,7 +44,7 @@ public class Server : MonoBehaviour {
         NetworkServer.Listen(port);
         NetworkServer.RegisterHandler(MsgType.Connect, onConnection);
         NetworkServer.RegisterHandler(MsgType.Disconnect, onDisnnection);
-
+        NetworkServer.RegisterHandler(MSG_SOS, onSos);
         serverText.text = "SERVER STARTED";
         humansTotal.text = "Humans Total: " + serverPlayers.Count.ToString();
 
@@ -162,6 +163,22 @@ public class Server : MonoBehaviour {
             serverPlayers[index].setPosition(temp.getPosition());
             //print("x: " + temp.getPosition().x + " z: " + temp.getPosition().z);
         }
+    }
+
+    //Sends an SOS signal to all connected players at a position
+    void onSos(NetworkMessage msg) {
+        print("RECEIVED SOS REQUEST");
+        NetworkMess mess = msg.ReadMessage<NetworkMess>();
+        Vector3 sosPos = mess.position;
+        NetworkMess clientMess = new NetworkMess();
+        clientMess.position = sosPos;
+        clientMess.rotation = mess.rotation;
+        clientMess.messageType = MSG_SOS;
+
+        for (int i = 0; i < NPCs.Count; i++) {
+            NetworkServer.SendToAll(clientMess.messageType, clientMess);
+        }
+
     }
 
     short GenerageUniquePlayerId()
