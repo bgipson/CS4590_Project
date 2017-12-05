@@ -20,7 +20,8 @@ public class Client : MonoBehaviour {
 
     // need handles on these for events
     public GameObject enemyText;
-    public GameObject sosSound;
+    public GameObject sosSound;  //This sound plays when a player is in trouble
+    public GameObject helpSound; //This sound plays when a player needs help
     GameObject connectToServer;
     GameObject pauseText;
     GameObject ipAddress;
@@ -74,8 +75,13 @@ public class Client : MonoBehaviour {
 
     public void onSos(NetworkMessage msg) {
         NetworkMess mess = msg.ReadMessage<NetworkMess>();
-        Vector3 soundPos = mess.position;
-        Instantiate(sosSound, soundPos, Quaternion.identity);
+        if (mess.sosNum == 0) {
+            Vector3 soundPos = mess.position;
+            Instantiate(sosSound, soundPos, Quaternion.identity);
+        } else {
+            Vector3 soundPos = mess.position;
+            Instantiate(helpSound, soundPos, Quaternion.identity);
+        }
     }
     public PlayerInfo getPlayerInfo()
     {
@@ -139,6 +145,7 @@ public class Client : MonoBehaviour {
         if (Input.GetKeyDown(KeyCode.Z)) {
             NetworkMess sosMess = new NetworkMess();
             sosMess.messageType = MSG_SOS;
+            sosMess.sosNum = 0;
             sosMess.position = playerInfo.position;
             sosMess.position = player.gameObject.transform.position;
             sosMess.rotation = player.gameObject.transform.rotation.eulerAngles;
@@ -147,7 +154,18 @@ public class Client : MonoBehaviour {
 
         //COMING FOR HELP
         if (Input.GetKeyDown(KeyCode.X)) {
+            NetworkMess sosMess = new NetworkMess();
+            sosMess.messageType = MSG_SOS;
+            sosMess.sosNum = 1;
+            sosMess.position = playerInfo.position;
+            sosMess.position = player.gameObject.transform.position;
+            sosMess.rotation = player.gameObject.transform.rotation.eulerAngles;
+            client.Send(sosMess.messageType, sosMess);
+        }
 
+        if (Input.GetKeyDown(KeyCode.M)) {
+            if (AudioListener.volume == 1) AudioListener.volume = 0;
+            else AudioListener.volume = 1;
         }
 
         if (Input.GetKeyDown(KeyCode.Escape))

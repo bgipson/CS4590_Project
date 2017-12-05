@@ -15,4 +15,5 @@ public class NetworkMess : MessageBase {
     public Vector3 position;
     public Vector3 rotation;
     public string name;
+    public int sosNum; //0 - SOS, 1 - HELPING
 }

@@ -78,6 +78,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Assets\TimedObjectDelete.cs" />
     <Compile Include="Assets\code\Client.cs" />
     <Compile Include="Assets\code\Destination.cs" />
     <Compile Include="Assets\code\MenuController.cs" />

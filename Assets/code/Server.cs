@@ -174,7 +174,7 @@ public class Server : MonoBehaviour {
         clientMess.position = sosPos;
         clientMess.rotation = mess.rotation;
         clientMess.messageType = MSG_SOS;
-
+        clientMess.sosNum = mess.sosNum;
         for (int i = 0; i < NPCs.Count; i++) {
             NetworkServer.SendToAll(clientMess.messageType, clientMess);
         }
